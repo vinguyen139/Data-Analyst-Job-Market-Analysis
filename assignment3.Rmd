@@ -1,0 +1,106 @@
+---
+title: "Data Analyst Skills and Salary Analysis"
+Author: Vi Nguyen
+output: html_document
+date: "2026-09-09"
+---
+
+# 1. Load the CSV and make a visualization
+
+```{r}
+getwd()
+setwd("/Users/vinguyen/Desktop/ITEC 4220")
+
+jobs <- read.csv("gsearch_jobs.csv")
+head(jobs)
+```
+
+```{r}
+skills <- c("sql", "excel", "python", "tableau", "power_bi",
+            "powerpoint", "word", "outlook", "aws", "spark")
+
+counts <- sapply(skills, function(x)
+  sum(grepl(x, jobs$description_tokens)))
+
+avg_salary <- sapply(skills, function(x)
+  mean(jobs$salary_standardized[
+    grepl(x, jobs$description_tokens)
+  ], na.rm=TRUE))
+
+bars <- barplot(counts,
+                names.arg=skills,
+                las=2,
+                main="Data Analyst Skills and Average Salary",
+                xlab="Skills",
+                ylab="Number of Job Postings")
+
+text(bars, counts,
+     labels=paste0("$", round(avg_salary)),
+     pos=3,
+     cex=0.7)
+```
+
+This graph compares how frequently 10 technical skills appear in Data Analyst job postings. The height of each bar represents the number of postings mentioning the skill, while the dollar amount above each bar represents the average standardized salary for jobs mentioning that skill.
+
+# 2. Simple Statistical Calculation
+```{r}
+jobs$python <- grepl("python", jobs$description_tokens)
+
+
+python_mean <- mean(
+  jobs$salary_standardized[jobs$python == TRUE],
+  na.rm=TRUE
+)
+
+no_python_mean <- mean(
+  jobs$salary_standardized[jobs$python == FALSE],
+  na.rm=TRUE
+)
+
+python_mean
+no_python_mean
+```
+
+For this part, I calculate the average salary for jobs with and without Python. The average salary for jobs mentioning Python was approximately $105,071, while jobs not mentioning Python had salary of approximately $88,200. This suggests that Python is associated with higher-paying Data Analyst positions.
+
+# 3. Correlation + R-square + p-value
+For this part, I want to see if Data Analyst jobs with higher minimum salaries also tend to have higher maximum salaries
+
+```{r}
+correlation_test <- cor.test(jobs$salary_min,
+         jobs$salary_max)
+correlation_test
+
+salary_model <- lm(salary_max ~ salary_min, data=jobs)
+
+summary(salary_model)
+
+plot(jobs$salary_min,
+     jobs$salary_max,
+     main="Minimum vs Maximum Salary",
+     xlab="Minimum Salary",
+     ylab="Maximum Salary",
+     pch=16)
+
+abline(salary_model)
+```
+The correlation between minimum and maximum salary was about 0.962. This indicated a very strong positive relationship. It means that when the minimum salary is higher, the maximum salary also tends to be higher. The p-value is less than 0.001 which indicating that the relationship is considered statistically significant, not just by random chance.
+
+#4. Histogram of Salary
+```{r}
+hist(jobs$salary_standardized,
+     main="Distribution of Data Analyst Salaries",
+     xlab="Standardized Salary",
+     ylab="Frequency",
+     breaks=30)
+```
+Most job salaries are concentrated in the lower and middle salary ranges, while a smaller number of jobs have a very high salaries. This makes the graph distribution right-skewed.
+
+# 5. T-Test
+For this part, I want to see if working from home/remote jobs have a different average salary than non-remote jobs.
+I divided the jobs into 2 groups: work-from-home jobs and jobs not mentioned work-from-home. I use the Welch two sample t-test to compare their average salaries.
+
+```{r}
+t.test(salary_standardized ~ work_from_home, data=jobs)
+```
+From the result, the average salaries for work-from-home was about $92,447, while the average salaries for non-work-from-home jobs was $92,027. The difference was about $420. The p-value was 0.6219, which is much higher than the significant level of 0.05. The result suggests that there is no statistically significant difference in average salary between work-from-home and non-work-from-home Data Analyst jobs from this dataset.
